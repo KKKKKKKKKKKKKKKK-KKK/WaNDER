@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>VR旅行</title>
+  <script src="https://aframe.io/releases/1.6.0/aframe.min.js"></script>
+  <script src="panoramas.js"></script>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; }
+    #message {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; box-sizing: border-box;
+      color: #fff; font: 16px/1.6 system-ui, sans-serif; text-align: center;
+      background: #000;
+    }
+    #message.hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div id="message">読み込み中…</div>
+
+  <a-scene vr-mode-ui="enabled: true" loading-screen="enabled: false" renderer="colorManagement: true">
+    <a-sky id="sky" radius="500"></a-sky>
+    <a-camera look-controls="reverseMouseDrag: true" wasd-controls="enabled: false"></a-camera>
+  </a-scene>
+
+  <script>
+    const message = document.getElementById("message");
+    const sky = document.getElementById("sky");
+
+    function showMessage(text) {
+      message.textContent = text;
+      message.classList.remove("hidden");
+    }
+
+    const key = new URLSearchParams(location.search).get("p");
+    const pano = key && Object.hasOwn(PANORAMAS, key) ? PANORAMAS[key] : null;
+
+    if (!pano) {
+      showMessage(key ? `「${key}」というパノラマは登録されていません。` : "URL に ?p=<名前> を付けて開いてください。");
+    } else {
+      document.title = `${pano.title} | VR旅行`;
+      showMessage(`${pano.title} を読み込み中…`);
+
+      // 読み込みが終わってから sky に貼ることで、途中の真っ白な状態を見せない
+      const img = new Image();
+      img.onload = () => {
+        // a-sky はそのままだと画像の端寄りが正面になるので -90 度回して画像中央を正面にする
+        sky.setAttribute("rotation", `0 ${-90 + (pano.rotation || 0)} 0`);
+        sky.setAttribute("src", img.src);
+        message.classList.add("hidden");
+      };
+      img.onerror = () => showMessage(`画像を読み込めませんでした: ${pano.file}`);
+      img.src = pano.file;
+    }
+  </script>
+</body>
+</html>
